@@ -427,8 +427,7 @@ def bgs(): # main app
     prog_folder_list = []
     cfgfile = ""
     #appdatapath = os.getenv('APPDATADIR')
-    #mypath = os.getenv('HOME')
-    mypath = '/media/Pandora/Entwicklung/BGS'
+    mypath = os.getenv('HOME')
     appdatapath = mypath
     logfile = appdatapath + "/bgs.log"
     iconfile = mypath + "/icon.png"
