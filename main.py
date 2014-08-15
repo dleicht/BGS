@@ -545,7 +545,6 @@ def bgs(): # main app
                     initiategauth()
                     checkbgsfolder()
                     fileupload(folderid, archivename, archivefile)
-                    add2log(logfile, today, archivefile, directorytobackup)
                     byebye()
 # Restore routine (to be done)
     else:
