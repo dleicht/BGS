@@ -1,4 +1,4 @@
-#  main.py
+#  main.py 15.08.14 - 13:03
 #  
 #  Copyright 2014 Ekianjo and Dominik Leicht (kickass) <domi.leicht@gmail.com>
 #  
