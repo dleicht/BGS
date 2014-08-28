@@ -165,7 +165,7 @@ def makearchivefile(folders): # build the actual archive from given path/filenam
         # kickass: funny, you imported PyZenity on purpose to make things easier, but decided to not use it in this case. i wonder why...
         #cmd = 'zenity --progress --text="Backing Up Games Saves..." --auto-close'
         #proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=folders[0], auto_close=True)
+        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=folders[0], auto_close=True, no_cancel=True)
         n = 0.0
         for folder in folders:
             n += 1
@@ -295,10 +295,15 @@ def getsize(startpath): #thanks stackoverflow!
 def initiategauth(): # get google authentication done properly. this, of course, does NOT need to be done with every file transaction.
     global gauth, drive
     gauth = GoogleAuth()
-    gauth.LocalWebserverAuth(browsercmd=browsers[0][2]) # Creates local webserver and auto handles authentication
-    global drive
-    drive = GoogleDrive(gauth)
-
+    print "Creating a local webserver and auto handle authentication..."
+    try:
+        gauth.LocalWebserverAuth(browsercmd=browsers[0][2]) # Creates local webserver and auto handles authentication
+        global drive
+        drive = GoogleDrive(gauth)
+    except Exception as err:
+        print err
+        a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), window_icon=iconfile)
+        bgs()
 
 def fileupload(fid, aname, afile): # upload a file to gdrive - fid is the fileID of the parent folder (_bgs), fname is the filename, of course
     global drive
@@ -306,13 +311,13 @@ def fileupload(fid, aname, afile): # upload a file to gdrive - fid is the fileID
     print "Now uploading: " + aname + "\nto folder: " + fid
     newfile.SetContentFile(afile)
     try:
-        proc = PyZenity.Progress(text='Uploading ' + aname, title='BGS - Backup Game Saves', auto_close=True, percentage=1, pulsate=True)(0)
+        proc = PyZenity.Progress(text='Uploading ' + aname, title='BGS - Backup Game Saves', auto_close=True, percentage=1, pulsate=True, no_cancel=True)(0)
         newfile.Upload()
         print "upload done!"
     except Exception as err:
         print err
         a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), window_icon=iconfile)
-        sys.exit()
+        bgs()
 
 
 def checkbgsfolder(): # check for a _bgs folder in the root dir of the gdrive account. if none is found it will be created.

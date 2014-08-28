@@ -338,7 +338,7 @@ def Warning(text, **kwargs):
     return run_zenity('--warning', *args).wait() == 0
 
 
-def Progress(text='', percentage=0, auto_close=False, pulsate=False, **kwargs):
+def Progress(text='', percentage=0, auto_close=False, pulsate=False, no_cancel=False, **kwargs):
     """Show a progress dialog to the user.
     
     This will raise a Zenity Progress Dialog.  It returns a callback that 
@@ -364,6 +364,8 @@ def Progress(text='', percentage=0, auto_close=False, pulsate=False, **kwargs):
         args.append('--percentage=%s' % percentage)
     if auto_close:
         args.append('--auto-close=%s' % auto_close)
+    if no_cancel:
+        args.append('--no-cancel=%s' % no_cancel)
     if pulsate:
         args.append('--pulsate=%s' % pulsate)
 
