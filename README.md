@@ -12,18 +12,13 @@ In order to run this invoke run.sh instead!
 
 Backup Game Saves is a Python tool to enable automatic backup of saved games and save states from emulators working on the Open Pandora (Linux handheld). It also duplicates the backup file to a destination of your choice.
 
-Additions to the initial BGS by ekianjo (as of 08.15.14):
+Additions to the initial BGS by ekianjo (as of 08.30.14):
 ---
 
-- cloud backup (google drive for now)
-- choice which games/emulators to backup
-- tar.bz2 instead of tar.gz
-- backup logging
-
-Supported Platforms
--------------------
-
-Currently all devices running libPND in a Linux environment, I guess :) Which basically reduces the use of this code to the Open Pandora Linux handheld, as far as I know. 
+- added google drive support
+- introduced a backup logging file (bgs.log)
+- backups on a per game/emulator basis
+- restore functionality
 
 Supported Applications
 ----------------------
@@ -99,6 +94,5 @@ Licensed under GPL v3
 To Do
 -----
 
-- A Restore Tool. 
 - Running unattended as a background task (without any gui), in order to run every couple of days or so?
 - Implement other cloud services

@@ -414,7 +414,7 @@ def GetText(text='', entry_text='', password=False, **kwargs):
         return p.stdout.read()[:-1]
 
 
-def TextInfo(filename=None, editable=False, **kwargs):
+def TextInfo(filename=None, editable=False, html_support=False, **kwargs):
     """Show the text of a file to the user.
 
     This will raise a Zenity Text Information Dialog presenting the user with 
@@ -430,6 +430,8 @@ def TextInfo(filename=None, editable=False, **kwargs):
         args.append('--filename=%s' % filename)
     if editable:
         args.append('--editable')
+    if html_support is True:
+        args.append('--html')
 
     for generic_args in kwargs_helper(kwargs):
         args.append('--%s=%s' % generic_args)
