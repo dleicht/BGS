@@ -1,4 +1,4 @@
-#  main.py 15.08.14 - 13:03
+#  main.py 30.08.14 - 13:03
 #  
 #  Copyright 2014 Ekianjo and Dominik Leicht (kickass) <domi.leicht@gmail.com>
 #  
@@ -52,7 +52,6 @@ Also its a reliable mechanism to prevent data loss.
 Please enjoy this software as much as we do :)
 
 ToDo List:
-- backups on a per game/emulator basis (decrease filesize and bandwith usage)
 - add additional cloud services
 - write a proper gui
 '''
@@ -60,7 +59,7 @@ ToDo List:
 # Let the code begin...
 import os, sys, tarfile, shutil, itertools
 import PyZenity, glob
-from pydrive.auth import GoogleAuth
+from pydrive.auth import GoogleAuth, CheckAuth
 from pydrive.drive import GoogleDrive
 from datetime import datetime
 
@@ -196,7 +195,7 @@ def makearchivefile(folders): # build the actual archive from given path/filenam
                 a = PyZenity.InfoMessage(text=archivefile + "\n was successfully copied to\n" + cfile, window_icon=iconfile)
             except Exception as err:
                 a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + err, title="BGS - Backup Save Games", window_icon=iconfile)
-                sys.exit()
+                bgs()
     else:
         pass
 
@@ -268,7 +267,7 @@ def findpreviousbgs(): #finds previous BGS files if they exist and ask to erase 
 def displayprogstobackup(list): #displays the list of programs found to be backed up for save data
     global programsfound, proglist, backupsize
     #backupsize = evaluatebackupsizebeforearchive() The user will choose which games to backup in this dialog now. So giving an estimation of the archive size upfront doesnt make sense anymore...
-    a = PyZenity.List(["#","Game"], text="Found the following games/emulators.\nPlease select which games you like to backup:", title="BGS - Backup Save Games", boolstyle="checklist", window_icon=iconfile, height=400, editable=False, select_col=None, sep='|', data=list)
+    a = PyZenity.List(["#","Game"], text="Found the following games/emulators.\nPlease select which you'd like to backup:", title="BGS - Backup Save Games", boolstyle="checklist", window_icon=iconfile, height=400, editable=False, select_col=None, sep='|', data=list)
     return a
 
 
@@ -353,10 +352,37 @@ def internet_on():
     nstat = os.system('ping -c 1 8.8.8.8')
     return nstat
 
+def untarbackup():
+    a = PyZenity.Warning(text="You seriously should ONLY\nrestore BGS made backups with this tool.\nYou risk data loss and/or disk damage otherwise.\n\nYou've been warned.", title="BGS - Backup Save Games", window_icon=iconfile)
+    if a is True:
+        file2untar = PyZenity.GetFilename(multiple=False, title="Choose a BGS made backup to restore:", window_icon=iconfile)
+        if file2untar:
+            try:
+                print "Chosen backup file: "+str(file2untar[0])
+                tar = tarfile.open(file2untar[0], mode="r:bz2")
+                print "\n\nTrying to extract the archive to / ...\n\n"
+                for tarinfo in tar:
+                    print tarinfo.name, "is", tarinfo.size, "bytes in size and is",
+                    if tarinfo.isreg():
+                        print "a regular file."
+                    elif tarinfo.isdir():
+                        print "a directory."
+                    else:
+                        print "something else."
+                    tar.extract(path="/",member=tarinfo)
+                tar.close()
+            except Exception as err:
+                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + err, title="BGS - Backup Save Games", window_icon=iconfile)
+                bgs()
+        else:
+            bgs()
+    else:
+        bgs()
+
 
 def bgs(): # main app
     # Variables galore...
-    global today, uploaddone, listoftemplates, browserdict, availablebrowsers, browsercmds, browsers, appsfolder, directorytobackup, programsfound, emptylist, directories, debug, appdatapath, mypath, cfgfile, mypath, iconfile, logfile
+    global today, uploaddone, listoftemplates, browserdict, availablebrowsers, browsercmds, browsers, appsfolder, directorytobackup, programsfound, emptylist, directories, debug, appdatapath, mypath, cfgfile, mypath, iconfile, logfile, gauth
     today = datetime.today().strftime("%Y-%m-%d_%H%M%S")
     #get media list in /media and record them in variable
     #check if they are still here at launch of the application
@@ -487,6 +513,7 @@ def bgs(): # main app
             makearchivefile(chosendirstobackup)
             add2log(logfile, today, archivefile, chosendirstobackup)
             byebye()
+            bgs()
 # Local + cloud backup routine
     elif backupchoice[0] == "Local + cloud backup":
         findpreviousbgs()
@@ -546,16 +573,22 @@ def bgs(): # main app
                     a = PyZenity.Warning(text="None of the required browsers [firefox,babypanda,qupzilla] seem to be installed.\nWe need one of these for Google authentication.\nPlease install at least one of them.", title="BGS - Backup Save Games", window_icon=iconfile)
                     bgs()
                 else:
-                    initiategauth()
+                    if not gauth or gauth.access_token_expired is True: # Check if GoogleAuth() has not been invoked before and if the Google Drive Access Token has expired. If so: initiate GoogleAuth()
+                        print "Google Auth needed..."
+                        initiategauth()
+                        print "gauth.access_token_expired = " + str(gauth.access_token_expired)
+                    else:
+                        print "gauth.access_token_expired = " + str(gauth.access_token_expired)
+                        print "Google Auth already handled..."
                     checkbgsfolder()
                     fileupload(folderid, archivename, archivefile)
                     byebye()
-# Restore routine (to be done)
+                    bgs()
+# Restore routine
     else:
-        print "Restore has to be done yet."
-        a = PyZenity.Warning(text="Sorry!\nThe restore function hasn't been implemented yet.", title="BGS - Backup Save Games", window_icon=iconfile)
+        untarbackup()
+        byebye()
         bgs()
-
-
+global gauth
+gauth = None
 bgs()
-
