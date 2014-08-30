@@ -165,7 +165,7 @@ def makearchivefile(folders): # build the actual archive from given path/filenam
         # kickass: funny, you imported PyZenity on purpose to make things easier, but decided to not use it in this case. i wonder why...
         #cmd = 'zenity --progress --text="Backing Up Games Saves..." --auto-close'
         #proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=folders[0], auto_close=True, no_cancel=True)
+        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=folders[0], auto_close=True, no_cancel=True, window_icon=iconfile)
         n = 0.0
         for folder in folders:
             n += 1
@@ -195,7 +195,7 @@ def makearchivefile(folders): # build the actual archive from given path/filenam
                 shutil.copyfile(archivefile, cfile) # copy
                 a = PyZenity.InfoMessage(text=archivefile + "\n was successfully copied to\n" + cfile, window_icon=iconfile)
             except Exception as err:
-                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + err, title="BGS - Backup Save Games", window_icon=iconfile)
+                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), title="BGS - Backup Save Games", window_icon=iconfile)
                 bgs()
     else:
         pass
@@ -375,7 +375,7 @@ def untarbackup():
                     tar.extract(path="/",member=tarinfo)
                 tar.close()
             except Exception as err:
-                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + err, title="BGS - Backup Save Games", window_icon=iconfile)
+                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), title="BGS - Backup Save Games", window_icon=iconfile)
                 bgs()
         else:
             bgs()
