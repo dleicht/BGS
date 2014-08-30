@@ -1,3 +1,0 @@
-You need
-PyZenity to run the current code. 
-Argparse will be needed in the future as well. 

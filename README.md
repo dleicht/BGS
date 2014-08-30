@@ -1,12 +1,24 @@
-BGS
+BGS - Dev branch
+
+This branch is used for rapid development!
 ===
 
-Backup Game Saves is a Python tool to enable automatic backup of saved games and save states from emulators working on the Open Pandora (Linux handheld). It also duplicates the backup file to a destination of your choice. 
+grab this branch like so:
+git clone -b Dev git@github.com:dleicht/BGS.git
 
-Supported Platforms
--------------------
+You will not be able to build a .pnd out of this without changing the code.
+In order to run this invoke run.sh instead!
 
-Currently all devices running libPND in a Linux environment, I guess :) Which basically reduces the use of this code to the Open Pandora Linux handheld, as far as I know. 
+
+Backup Game Saves is a Python tool to enable automatic backup of saved games and save states from emulators working on the Open Pandora (Linux handheld). It also duplicates the backup file to a destination of your choice.
+
+Additions to the initial BGS by ekianjo (as of 08.30.14):
+---
+
+- added google drive support
+- introduced a backup logging file (bgs.log)
+- backups on a per game/emulator basis
+- restore functionality
 
 Supported Applications
 ----------------------
@@ -82,8 +94,5 @@ Licensed under GPL v3
 To Do
 -----
 
-- A Restore Tool. 
 - Running unattended as a background task (without any gui), in order to run every couple of days or so?
-- Backups on a per game/emulator basis (almost there)
-- Better compression mechanism
 - Implement other cloud services

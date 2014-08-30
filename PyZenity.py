@@ -338,7 +338,7 @@ def Warning(text, **kwargs):
     return run_zenity('--warning', *args).wait() == 0
 
 
-def Progress(text='', percentage=0, auto_close=False, pulsate=False, **kwargs):
+def Progress(text='', percentage=0, auto_close=False, pulsate=False, no_cancel=False, **kwargs):
     """Show a progress dialog to the user.
     
     This will raise a Zenity Progress Dialog.  It returns a callback that 
@@ -364,6 +364,8 @@ def Progress(text='', percentage=0, auto_close=False, pulsate=False, **kwargs):
         args.append('--percentage=%s' % percentage)
     if auto_close:
         args.append('--auto-close=%s' % auto_close)
+    if no_cancel:
+        args.append('--no-cancel=%s' % no_cancel)
     if pulsate:
         args.append('--pulsate=%s' % pulsate)
 
@@ -412,7 +414,7 @@ def GetText(text='', entry_text='', password=False, **kwargs):
         return p.stdout.read()[:-1]
 
 
-def TextInfo(filename=None, editable=False, **kwargs):
+def TextInfo(filename=None, editable=False, html_support=False, **kwargs):
     """Show the text of a file to the user.
 
     This will raise a Zenity Text Information Dialog presenting the user with 
@@ -428,6 +430,8 @@ def TextInfo(filename=None, editable=False, **kwargs):
         args.append('--filename=%s' % filename)
     if editable:
         args.append('--editable')
+    if html_support is True:
+        args.append('--html')
 
     for generic_args in kwargs_helper(kwargs):
         args.append('--%s=%s' % generic_args)

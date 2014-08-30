@@ -1,4 +1,4 @@
-#  main.py
+#  main.py 30.08.14 - 23:03
 #  
 #  Copyright 2014 Ekianjo and Dominik Leicht (kickass) <domi.leicht@gmail.com>
 #  
@@ -28,10 +28,10 @@ Code refinement and additions since v0.2.5.0 by kickass
 Version history:
 
 v0.2.5.0 (Aug 2014):	added google drive support:
-            changed the gui design
-            introduced a backup logging file (bgs.log)
-            (backups on a per game/emulator basis)
-            (reestore functionality)
+                        changed the gui design
+                        introduced a backup logging file (bgs.log)
+                        backups on a per game/emulator basis
+                        restore functionality
 -----------------------
 BGS has 3 main funtions:
 
@@ -52,15 +52,15 @@ Also its a reliable mechanism to prevent data loss.
 Please enjoy this software as much as we do :)
 
 ToDo List:
-- backups on a per game/emulator basis (decrease filesize and bandwith usage)
 - add additional cloud services
+- implement some daemon/background service functionality
 - write a proper gui
 '''
 
 # Let the code begin...
-import os, sys, tarfile, shutil
+import os, sys, tarfile, shutil, itertools, pprint
 import PyZenity, glob
-from pydrive.auth import GoogleAuth
+from pydrive.auth import GoogleAuth, CheckAuth
 from pydrive.drive import GoogleDrive
 from datetime import datetime
 
@@ -104,7 +104,7 @@ def parsedesktopfile(browserlist): # parse the existing browsers for their respe
 
 
 def kindofbackup(): # this is kind of a main menu
-    choicelist = [["Local backup only"], ["Local + cloud backup"], ["Restore from backup"]]
+    choicelist = [["Backup"], ["Restore"], ["About"]]
     a = PyZenity.List(["Your choice"],
         text="BGS - Your trusty savegame backup solution\n\nThis little tool will search your handheld for installed games/emulators\nand will then backup the corresponding savegames\nor restore savegames from an earlier backup.",
         title="BGS - Backup Game Saves", height=300, editable=False, select_col=1, window_icon=iconfile,
@@ -141,33 +141,33 @@ def backupspecific(progname, appdatafolder, listfolders, listfiles): # crawl the
                                 directorytobackup.append(resultat)
 
 
-def makearchivefile(): # build the actual archive from given path/filenames
+def makearchivefile(folders): # build the actual archive from given path/filenames
     global directorytobackup, directories, today, shutil, archivename, archivefile
     sizeofarchive = 0
     pathtoarchive = ""
-    archivename = "BGSfile{0}.tar.gz".format(today)
+    archivename = "BGSfile{0}.tar.bz2".format(today)
     pathtoarchive = PyZenity.GetDirectory(multiple=False, title="Choose a path for your backup:", window_icon=iconfile, selected="/media", sep=None)
     if pathtoarchive == None:
         print "Canceled by user..."
         sys.exit()
     else:
-        print "pathtoarchive:"
-        print pathtoarchive
+        #print "pathtoarchive:"
+        #print pathtoarchive
         archivefile = pathtoarchive[0] + "/" + archivename # Maybe pathtoarchive is a list, maybe use [0]
         print "Chosen path for the archive: " + archivefile
         if os.path.isfile(archivefile) == True:
             print "Careful, an archive with the same name already exists."
-        tar = tarfile.open(archivefile, "w:gz")
+        tar = tarfile.open(archivefile, "w:bz2")
         #define nb of directories to backup
-        nbdirectoriestobackup = float(len(directorytobackup))
+        nbdirectoriestobackup = float(len(folders))
         print nbdirectoriestobackup
         #there will probably be bugs inside this part... need to check it out!!
         # kickass: funny, you imported PyZenity on purpose to make things easier, but decided to not use it in this case. i wonder why...
         #cmd = 'zenity --progress --text="Backing Up Games Saves..." --auto-close'
         #proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=directorytobackup[0], auto_close=True)
+        proc = PyZenity.Progress(title="BGS - Backup Game Saves", text=folders[0], auto_close=True, no_cancel=True, window_icon=iconfile)
         n = 0.0
-        for folder in directorytobackup:
+        for folder in folders:
             n += 1
             print n
             tar.add(folder)
@@ -194,25 +194,24 @@ def makearchivefile(): # build the actual archive from given path/filenames
             try:
                 shutil.copyfile(archivefile, cfile) # copy
                 a = PyZenity.InfoMessage(text=archivefile + "\n was successfully copied to\n" + cfile, window_icon=iconfile)
-            except Error as err:
-                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + err, title="BGS - Backup Save Games", window_icon=iconfile)
-                sys.exit()
+            except Exception as err:
+                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), title="BGS - Backup Save Games", window_icon=iconfile)
+                bgs()
     else:
         pass
 
 
-def checkprogram(progname,
-                 directory): #returns folder if the PND is found in one of the appsfolder directory or "" if not found
+def checkprogram(progname, directory): #returns folder if the PND is found in one of the appsfolder directory or "" if not found
     global appsfolder
     found = 0
     for folder in appsfolder:
         if os.path.isfile("/media/{0}/pandora/{1}/{2}".format(directory, folder, progname)) == True:
             print "Found " + progname + " in " + folder + " in " + directory
             found += 1
-    if found == 0:
-        return ""
-    else:
-        return folder
+        if found == 0:
+            return ""
+        else:
+            return folder
 
 
 def checkappdata(appdatafolder, directory): #checks if the related appfolder exists
@@ -249,32 +248,27 @@ def findpreviousbgs(): #finds previous BGS files if they exist and ask to erase 
         if caca != []:
             for element in caca:
                 result.append(element)
-    print result
     if result != []:
+        print "\nFound previous bgs archives:"
+        print result
         resultstring = ""
         sizetotal = 0
         for element in result:
-            resultstring += element + " "
+            resultstring += element + "\n"
             sizetotal += int((os.path.getsize(element)) / (1024 * 1024))
-        a = PyZenity.Question(
-            text="I found previous BGS files: {0}.They are taking a total of {1} Mb in size. Ok to delete them and create new ones ?".format(resultstring, str(sizetotal)), title="BGS - Backup Game Saves", window_icon=iconfile)
+        a = PyZenity.Question(text="I found previous BGS archives:\n{0}\nThey are taking a total of {1} Mb in size.\n\nWould you like to delete them?".format(resultstring, str(sizetotal)), title="BGS - Backup Game Saves", window_icon=iconfile)
         if a == True:
             for element in result:
                 os.remove(element)
-            a = PyZenity.InfoMessage(text="Previous BGS files were deleted", title="BGS - Backup Game Saves", window_icon=iconfile)
+                print element + " removed."
         else:
-            a = PyZenity.InfoMessage(text="Previous BGS files were kept", title="BGS - Backup Game Saves", window_icon=iconfile)
+            print "Previous archives were kept."
 
 
-def displayprogstobackup(): #displays the list of programs found to be backed up for save data
+def displayprogstobackup(list): #displays the list of programs found to be backed up for save data
     global programsfound, proglist, backupsize
-    backupsize = evaluatebackupsizebeforearchive()
-    proglist = []
-    programsfoundstring = ""
-    for program in programsfound:
-        programsfoundstring += program + " "
-    proglist.append(programsfound)
-    a = PyZenity.List(["Game"], text="Found the following games/emulators.\nFor now i will backup all of them.\n\nCurrent size of this backup (unzipped): " + str(backupsize) + " Mb", title="BGS - Backup Save Games", boolstyle=None, window_icon=iconfile, editable=False, select_col=None, sep='|', data=proglist)
+    #backupsize = evaluatebackupsizebeforearchive() The user will choose which games to backup in this dialog now. So giving an estimation of the archive size upfront doesnt make sense anymore...
+    a = PyZenity.List(["#","Game"], text="Found the following games/emulators.\nPlease select which you'd like to backup:", title="BGS - Backup Save Games", boolstyle="checklist", window_icon=iconfile, height=400, editable=False, select_col=None, sep='|', data=list)
     return a
 
 
@@ -299,29 +293,36 @@ def getsize(startpath): #thanks stackoverflow!
 
 
 def initiategauth(): # get google authentication done properly. this, of course, does NOT need to be done with every file transaction.
-    global gauth
+    global gauth, drive
     gauth = GoogleAuth()
-    gauth.LocalWebserverAuth(browsercmd=browsers[0][2]) # Creates local webserver and auto handles authentication
-    global drive
-    drive = GoogleDrive(gauth)
-
+    print "Creating a local webserver and auto handle authentication..."
+    try:
+        gauth.LocalWebserverAuth(browsercmd=browsers[0][2]) # Creates local webserver and auto handles authentication
+        global drive
+        drive = GoogleDrive(gauth)
+    except Exception as err:
+        print err
+        a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), window_icon=iconfile)
+        bgs()
 
 def fileupload(fid, aname, afile): # upload a file to gdrive - fid is the fileID of the parent folder (_bgs), fname is the filename, of course
+    global drive
     newfile = drive.CreateFile({'title': aname, "parents": [{"kind": "drive#fileLink", "id": fid}]})
     print "Now uploading: " + aname + "\nto folder: " + fid
     newfile.SetContentFile(afile)
     try:
-        proc = PyZenity.Progress(text='Uploading ' + aname, title='BGS - Backup Game Saves', auto_close=True, percentage=1, pulsate=True)(0)
+        proc = PyZenity.Progress(text='Uploading ' + aname, title='BGS - Backup Game Saves', auto_close=True, pulsate=True, no_cancel=True, window_icon=iconfile)
+        proc(10)
         newfile.Upload()
         print "upload done!"
+        proc(100)
     except Exception as err:
         print err
         a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), window_icon=iconfile)
-        sys.exit()
+        bgs()
 
 
-def checkbgsfolder(): # check for a _bgs folder in the root dir of the gdrive account. if none is found it will be created. 
-    global drive
+def checkbgsfolder(): # check for a _bgs folder in the root dir of the gdrive account. if none is found it will be created.
     global folderid
     folderthere = False
     file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
@@ -341,7 +342,7 @@ def checkbgsfolder(): # check for a _bgs folder in the root dir of the gdrive ac
         newdir.Upload()
         print "Created _bgs folder..."
         print "Re-checking for the folder to get the id..."
-checkbgsfolder()
+        checkbgsfolder()
 
 
 def byebye():
@@ -354,10 +355,37 @@ def internet_on():
     nstat = os.system('ping -c 1 8.8.8.8')
     return nstat
 
+def untarbackup():
+    a = PyZenity.Warning(text="You seriously should ONLY\nrestore BGS made backups with this tool.\nYou risk data loss and/or disk damage otherwise.\n\nYou've been warned.", title="BGS - Backup Save Games", window_icon=iconfile)
+    if a is True:
+        file2untar = PyZenity.GetFilename(multiple=False, title="Choose a BGS made backup to restore:", window_icon=iconfile)
+        if file2untar:
+            try:
+                print "Chosen backup file: "+str(file2untar[0])
+                tar = tarfile.open(file2untar[0], mode="r:bz2")
+                print "\n\nTrying to extract the archive to / ...\n\n"
+                for tarinfo in tar:
+                    print tarinfo.name, "is", tarinfo.size, "bytes in size and is",
+                    if tarinfo.isreg():
+                        print "a regular file."
+                    elif tarinfo.isdir():
+                        print "a directory."
+                    else:
+                        print "something else."
+                    tar.extract(path="/",member=tarinfo)
+                tar.close()
+            except Exception as err:
+                a = PyZenity.Warning(text="Whoooooops, something went wrong.\nHere's an error msg for you:'\n\n" + str(err), title="BGS - Backup Save Games", window_icon=iconfile)
+                bgs()
+        else:
+            bgs()
+    else:
+        bgs()
+
 
 def bgs(): # main app
     # Variables galore...
-    global today, uploaddone, listoftemplates, browserdict, availablebrowsers, browsercmds, browsers, appsfolder, directorytobackup, programsfound, emptylist, directories, debug, appdatapath, mypath, cfgfile, mypath, iconfile, logfile
+    global today, uploaddone, listoftemplates, browserdict, availablebrowsers, browsercmds, browsers, appsfolder, directorytobackup, programsfound, emptylist, directories, debug, appdatapath, mypath, cfgfile, mypath, iconfile, logfile, gauth
     today = datetime.today().strftime("%Y-%m-%d_%H%M%S")
     #get media list in /media and record them in variable
     #check if they are still here at launch of the application
@@ -429,11 +457,12 @@ def bgs(): # main app
     emptylist = []
     directories = ""
     debug = False
-    appdatapath = ""
+    prog_folder_couple = []
+    prog_folder_list = []
     cfgfile = ""
-    appdatapath = os.getenv('APPDATADIR')
+    #appdatapath = os.getenv('APPDATADIR')
     mypath = os.getenv('HOME')
-    #mypath = '/home/domi/projects/BGS'
+    appdatapath = mypath
     logfile = appdatapath + "/bgs.log"
     iconfile = mypath + "/icon.png"
     defineglobaldirectories()
@@ -441,62 +470,92 @@ def bgs(): # main app
     if backupchoice == None:
         print "Canceled by user..."
         sys.exit()
-# Local backup routine
-    elif backupchoice[0] == "Local backup only":
+# Backup routine
+    elif backupchoice[0] == "Backup":
         findpreviousbgs()
         for programtobackup in listoftemplates:
             backupspecific(programtobackup[0], programtobackup[1], programtobackup[2], programtobackup[3])
-        progdisplay = displayprogstobackup()
+            if directorytobackup != []: # check listoftemplates for programs, if directorytobackup is NOT empty, the program seems to be available for backup
+                prog_folder_couple.append(programtobackup[0]) # add the program .pnd name to a list of program+[folders] couple list (on a per program basis - so the program name and corresponding folders will be coupled properly
+                prog_folder_couple.append(directorytobackup) # add the folders to that same couple list
+                directorytobackup = [] # make sure these folders will not be used for the next program
+                prog_folder_list.append(prog_folder_couple) # add the couple list to a list of all couples
+                prog_folder_couple = []
+            else:
+                pass
+        #print "prog_folder_list:\n"
+        #print prog_folder_list
+        bgs_dict = dict(prog_folder_list) # now this is really cool: using a dictionary with prognames as keys, we can easily ask for prognames to be backuped and parse the dictionary for the corresponding values to automatically get the right folders!
+        print "\nDictionary of games:folders available for backup (bgs_dict):\n"
+        pprint.pprint(bgs_dict)
+        gamelist = []
+        glist = []
+        for item in bgs_dict.keys():
+            gamelist.append("")
+            gamelist.append(item)
+            glist.append(gamelist)
+            gamelist = []
+        #print glist
+        progdisplay = displayprogstobackup(glist)
         if progdisplay == None:
             print "Canceled by user..."
             sys.exit()
-        else:
-            print directorytobackup
-            makearchivefile()
-            add2log(logfile, today, archivefile, directorytobackup)
-            byebye()
-# Local + cloud backup routine
-    elif backupchoice[0] == "Local + cloud backup":
-        browsers = parsedesktopfile(checkbrowsers(browserdict))
-        print browsers
-        print
-        for item in browsers:
-            print "found: " + item[0] + " here:" + item[2]
-            print
-        if internet_on() != 0:
-            a = PyZenity.Warning(text="Can't reach the interwebs!\nGo check your connection.",
-                title="BGS - Backup Save Games", window_icon=iconfile)
+        elif progdisplay == [""]:
+            print "No choice was made."
+            a = PyZenity.Warning(text="Please choose at least one game to backup!", title="BGS - Backup Save Games", window_icon=iconfile)
             bgs()
         else:
-            if browsers == "":
-                a = PyZenity.Warning(
-                    text="None of the required browsers [firefox,babypanda,qupzilla] seem to be installed.\nWe need one of these for Google authentication.\nPlease install at least one of them.",
-                    title="BGS - Backup Save Games", window_icon=iconfile)
-                bgs()
-            else:
-                findpreviousbgs()
-                for programtobackup in listoftemplates:
-                    backupspecific(programtobackup[0], programtobackup[1], programtobackup[2], programtobackup[3])
-                progdisplay = displayprogstobackup()
-                if progdisplay == None:
-                    print "Canceled by user..."
-                    sys.exit()
+            print "\nChosen progs to backup:\n"
+            print progdisplay
+            chosendirstobackup_ = []
+            for item in progdisplay:
+                chosendirstobackup_.append(bgs_dict[item]) # parse the dictionary for values(folders) of the chosen items(prognames).
+            chosendirstobackup = list(itertools.chain(*chosendirstobackup_)) # proper usage of itertools to flatten a nested list of lists :) note there's two lists here: chosendirstobackup_ and chosendirstobackup
+            print "\nWill now start makearchivefile() with the following folders:"
+            print chosendirstobackup
+            makearchivefile(chosendirstobackup)
+            add2log(logfile, today, archivefile, chosendirstobackup)
+            a = PyZenity.Question(text="Automatically upload this backup to google drive?", title="BGS - Backup Save Games", window_icon=iconfile)
+            if a is True:
+                browsers = parsedesktopfile(checkbrowsers(browserdict))
+                print "\nFound the following browsers:"
+                pprint.pprint(browsers)
+#                for item in browsers:
+#                    print "found: " + item[0] + " here:" + item[2]
+#                    print
+                if internet_on() != 0:
+                    a = PyZenity.Warning(text="Can't reach the interwebs!\nGo check your connection.", title="BGS - Backup Save Games", window_icon=iconfile)
+                    bgs()
                 else:
-                    #directorytobackup=[directorytobackup[0]] # for gdrive upload testing purposes...
-                    print directorytobackup
-                    makearchivefile()
-                    initiategauth()
-                    checkbgsfolder()
-                    fileupload(folderid, archivename, archivefile)
-                    add2log(logfile, today, archivefile, directorytobackup)
-                byebye()
-# Restore routine (to be done)
-    else:
-        print "Restore has to be done yet."
-        a = PyZenity.Warning(text="Sorry!\nThe restore function hasn't been implemented yet.",
-            title="BGS - Backup Save Games", window_icon=iconfile)
+                    if browsers == "":
+                        a = PyZenity.Warning(text="None of the required browsers [firefox,babypanda,qupzilla] seem to be installed.\nWe need one of these for Google authentication.\nPlease install at least one of them.", title="BGS - Backup Save Games", window_icon=iconfile)
+                        bgs()
+                    else:
+                        if not gauth or gauth.access_token_expired is True: # Check if GoogleAuth() has not been invoked before and if the Google Drive Access Token has expired. If so: initiate GoogleAuth()
+                            print "Google Auth needed..."
+                            initiategauth()
+                            print "gauth.access_token_expired = " + str(gauth.access_token_expired)
+                        else:
+                            print "gauth.access_token_expired = " + str(gauth.access_token_expired)
+                            print "Google Auth already handled..."
+                        checkbgsfolder()
+                        fileupload(folderid, archivename, archivefile)
+            byebye()
+            bgs()
+
+# Restore routine
+    elif backupchoice[0] == "Restore":
+        untarbackup()
+        byebye()
+        bgs()
+
+# Show some info about BGS
+    elif backupchoice[0] == "About":
+        a = PyZenity.TextInfo(filename="readme.txt", window_icon=iconfile, font="monospace", width=500, height=400)
         bgs()
 
 
-bgs()
 
+global gauth
+gauth = None
+bgs()
